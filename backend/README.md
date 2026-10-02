@@ -4,6 +4,15 @@ A REST backend for an event ticketing platform with two roles. **Attendees** bro
 
 The core guarantee is that **an event is never oversold, even under concurrent load**. Real multi-threaded tests run against PostgreSQL to show it (see [Concurrency strategy](#concurrency-strategy)).
 
+| | |
+|---|---|
+| **Live API** | https://eventra-api-rwzm.onrender.com |
+| **Swagger UI** | https://eventra-api-rwzm.onrender.com/docs |
+| **ReDoc** | https://eventra-api-rwzm.onrender.com/redoc |
+| **Source** | https://github.com/johanderick562008/eventra |
+
+The API is hosted on Render's free plan, which sleeps when idle, so the first request after a pause can take 30–60 seconds.
+
 - [Features](#features) · [Stack](#technology-stack) · [Architecture](#architecture) · [Database](#database-schema)
 - [Local setup](#local-setup) · [Docker](#docker) · [API usage](#api-usage-real-requests-and-responses) · [Business rules](#business-rules)
 - [Concurrency](#concurrency-strategy) · [Testing](#testing) · [Deployment](#deployment) · [Security](#security-measures) · [Limitations](#known-limitations)
@@ -400,7 +409,12 @@ smoke_test.py     → all 19 steps PASS against the Docker image, including on a
 
 ## Deployment
 
-The service is ready to deploy but **has not been deployed**. Deploying needs your own hosting account. There is no live URL yet.
+**Deployed on Render:** https://eventra-api-rwzm.onrender.com (Swagger at [`/docs`](https://eventra-api-rwzm.onrender.com/docs)). It runs as a Docker web service with a managed PostgreSQL database, created from [`render.yaml`](../render.yaml) at the repository root.
+
+**Checks run against the live deployment on 2026-10-02:**
+- `python scripts/smoke_test.py https://eventra-api-rwzm.onrender.com`: all 19 steps PASS.
+- Live race test: 12 attendees booked 1 ticket each, simultaneously, for an event with capacity 3. Result: exactly 3 × 201 and 9 × 409 `INSUFFICIENT_CAPACITY`; the summary showed `tickets_sold = 3` and `remaining_capacity = 0`.
+- Production mode is active: the `Strict-Transport-Security` header is present.
 
 ### Render (blueprint)
 
@@ -467,4 +481,4 @@ In production mode, startup fails if `JWT_SECRET_KEY` is the development default
 - **Access tokens are not revocable before expiry**, which is at most 30 minutes. Deactivated accounts are still blocked immediately, because every request checks the user row.
 - **The status sweep runs inside every web worker.** It is idempotent and harmless, but a dedicated scheduler would be cleaner at scale.
 - **One booking per request.** There is no "hold seats, then pay" flow and no seat selection.
-- **Not deployed.** There is no live API URL or GitHub URL yet: see [Deployment](#deployment).
+- **Free hosting tier.** The live instance sleeps when idle (slow first request), and Render's free PostgreSQL has a limited lifetime.
